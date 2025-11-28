@@ -1,31 +1,36 @@
 from typing import List, Optional
-from ninja import NinjaAPI
+from ninja import NinjaAPI, File
+from ninja.files import UploadedFile
 from .models import Track
-from .schema import TrackSchema,NotFoundSchema
+from .schema import TrackSchema, NotFoundSchema
 
 api = NinjaAPI()
 
-@api.get('/tracks',response=List[TrackSchema])
-def tracks(request,title: Optional[str] = None):
+
+@api.get('/tracks', response=List[TrackSchema])
+def tracks(request, title: Optional[str] = None):
     if title:
         return Track.objects.filter(title__icontains=title)
     return Track.objects.all()
 
-@api.get("/tracks/{id}",response={200: TrackSchema,404: NotFoundSchema})
-def track(request, id:int):
+
+@api.get("/tracks/{id}", response={200: TrackSchema, 404: NotFoundSchema})
+def track(request, id: int):
     try:
         track = Track.objects.get(pk=id)
         return 200, track
     except Track.DoesNotExist as e:
         return 404, {"message": str(e)}
 
-@api.post("/tracks",response={201: TrackSchema})
+
+@api.post("/tracks", response={201: TrackSchema})
 def create_track(request, track: TrackSchema):
     track = Track.objects.create(**track.dict())
     return 201, track
 
-@api.put("/tracks/{id}",response={200: TrackSchema, 404: NotFoundSchema})
-def update_track(request, id:int, data: TrackSchema):
+
+@api.put("/tracks/{id}", response={200: TrackSchema, 404: NotFoundSchema})
+def update_track(request, id: int, data: TrackSchema):
     try:
         track = Track.objects.get(pk=id)
         for attribute, value in data.dict().items():
@@ -35,11 +40,21 @@ def update_track(request, id:int, data: TrackSchema):
     except Track.DoesNotExist as e:
         return 404, {"message": str(e)}
 
-@api.delete("/tracks/{id}",response={200: None, 404: NotFoundSchema})
-def update_track(request, id:int):
+
+@api.delete("/tracks/{id}", response={200: None, 404: NotFoundSchema})
+def update_track(request, id: int):
     try:
         track = Track.objects.get(pk=id)
         track.delete()
         return 200
     except Track.DoesNotExist as e:
         return 404, {"message": str(e)}
+
+
+@api.post("/upload", url_name="upload")
+def upload(request, file: UploadedFile = File(...)):
+    data = file.read().decode()
+    return {
+        "name": file.name,
+        "data": data,
+    }
